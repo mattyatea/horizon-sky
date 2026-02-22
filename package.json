@@ -1,0 +1,47 @@
+{
+  "name": "horizon-sky",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Physics-based sky gradient renderer. Given a date/time and coordinates, returns a CSS gradient representing the current sky.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "import": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "require": {
+      "types": "./dist/index.d.cts",
+      "default": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json && node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "sky",
+    "gradient",
+    "atmosphere",
+    "css",
+    "sunrise",
+    "sunset",
+    "rendering"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "suncalc": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/suncalc": "^1.9.2",
+    "typescript": "^5.9.3"
+  }
+}
