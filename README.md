@@ -49,15 +49,13 @@ const sky = await computeSky({
 | `latitude` | `number` | ✅ | Latitude in degrees (-90 to 90) |
 | `longitude` | `number` | ✅ | Longitude in degrees (-180 to 180) |
 | `sunTimes` | `SunTimesOption` | — | Enable sunrise/sunset altitude correction (see below) |
+| `bortle` | `number` | — | Bortle scale (1-9) for light pollution correction |
 
 **`SunTimesOption`:**
 
 ```ts
 // Disabled (default) — no correction applied
 sunTimes: false
-
-// Enabled with built-in default provider (sunrise-sunset.org)
-sunTimes: true
 
 // Enabled with a custom provider
 sunTimes: { provider: myCustomProvider }
@@ -67,14 +65,14 @@ sunTimes: { provider: myCustomProvider }
 
 ```ts
 interface SkyResult {
-  gradient: string;           // CSS linear-gradient string
-  topColor: string;           // "rgb(r, g, b)" — zenith (top) color
-  bottomColor: string;        // "rgb(r, g, b)" — horizon (bottom) color
-  altitude: number;           // Sun altitude in radians (raw)
-  azimuth: number;            // Sun azimuth in radians
-  correctedAltitude?: number; // Altitude after sunrise/sunset correction (only when sunTimes is enabled)
-  sunrise?: Date;             // Sunrise time (only when sunTimes is enabled)
-  sunset?: Date;              // Sunset time (only when sunTimes is enabled)
+  gradient: string;
+  topColor: string;
+  bottomColor: string;
+  altitude: number;
+  azimuth: number;
+  correctedAltitude?: number;
+  sunrise?: Date;
+  sunset?: Date;
 }
 ```
 
@@ -92,9 +90,9 @@ const controller = new AbortController();
 for await (const sky of realtimeSky({
   latitude: 35.6895,
   longitude: 139.6917,
-  interval: 60_000,          // update every 60 seconds (default)
-  signal: controller.signal, // stop when aborted
-  sunTimes: true,
+  interval: 60_000,
+  signal: controller.signal,
+  sunTimes: { provider: myCustomProvider },
 })) {
   document.body.style.background = sky.gradient;
 }
@@ -119,15 +117,11 @@ controller.abort();
 
 By default, `computeSky` uses the raw solar altitude from orbital mechanics. This is accurate but may produce slightly off colors at exactly sunrise/sunset since the horizon reference differs from the physical model.
 
-When `sunTimes` is enabled, the library fetches the actual sunrise/sunset times for the given location and date, then corrects the altitude so the gradient transitions precisely at those moments.
-
-### Default Provider
-
-When `sunTimes: true` is passed, the library uses the [sunrise-sunset.org](https://sunrise-sunset.org/api) public API. This requires an internet connection.
+When a custom provider is provided via `sunTimes: { provider }`, the library fetches the actual sunrise/sunset times for the given location and date, then corrects the altitude so the gradient transitions precisely at those moments.
 
 ### Custom Provider
 
-You can replace the default API with any source by providing a `provider` function.
+You must provide a `provider` function to enable sunrise/sunset correction. This gives you full control over the data source.
 
 ```ts
 import { computeSky } from "horizon-sky";
@@ -137,7 +131,7 @@ const myProvider: SunTimesProvider = async ({ latitude, longitude, date }) => {
   const res = await fetch(`https://my-api.example.com/sun?lat=${latitude}&lng=${longitude}&date=${date}`);
   const data = await res.json();
   return {
-    sunrise: data.sunrise_utc, // ISO 8601 UTC string or Date object
+    sunrise: data.sunrise_utc,
     sunset: data.sunset_utc,
   };
 };
@@ -156,14 +150,14 @@ const sky = await computeSky({
 type SunTimesProvider = (params: SunTimesRequest) => Promise<SunTimesResponse>;
 
 interface SunTimesRequest {
-  latitude: number;   // Latitude in degrees (-90 to 90)
-  longitude: number;  // Longitude in degrees (-180 to 180)
-  date: string;       // Local date at the given coordinates, formatted as "YYYY-MM-DD"
+  latitude: number;
+  longitude: number;
+  date: string;
 }
 
 interface SunTimesResponse {
-  sunrise: Date | string; // Sunrise time — UTC ISO 8601 string (e.g. "2026-06-21T20:30:00+00:00") or Date object
-  sunset: Date | string;  // Sunset time — UTC ISO 8601 string or Date object
+  sunrise: Date | string;
+  sunset: Date | string;
 }
 ```
 

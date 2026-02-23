@@ -18,8 +18,7 @@ export interface SkyResult {
 
 export type SunTimesOption =
   | false
-  | true
-  | { provider?: SunTimesProvider };
+  | { provider: SunTimesProvider };
 
 export interface ComputeSkyOptions {
   date: Date;
@@ -50,10 +49,7 @@ export async function computeSky(options: ComputeSkyOptions): Promise<SkyResult>
   let sunset: Date | undefined;
 
   if (sunTimesOption) {
-    const provider =
-      sunTimesOption === true || sunTimesOption.provider === undefined
-        ? undefined
-        : sunTimesOption.provider;
+    const provider = sunTimesOption.provider;
 
     const sunTimes: SunTimes = await fetchSunTimes(latitude, longitude, date, provider);
     correctedAltitude = correctAltitude(date, rawAltitude, sunTimes, latitude, longitude);

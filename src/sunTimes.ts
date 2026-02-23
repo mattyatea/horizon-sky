@@ -16,28 +16,11 @@ export interface SunTimesResponse {
 
 export type SunTimesProvider = (params: SunTimesRequest) => Promise<SunTimesResponse>;
 
-export async function defaultSunTimesProvider(params: SunTimesRequest): Promise<SunTimesResponse> {
-  const { latitude, longitude, date } = params;
-  const url = `https://api.sunrise-sunset.org/json?lat=${latitude}&lng=${longitude}&date=${date}&formatted=0`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`sunrise-sunset.org API error: ${res.status}`);
-  }
-  const json = (await res.json()) as {
-    status: string;
-    results: { sunrise: string; sunset: string };
-  };
-  if (json.status !== "OK") {
-    throw new Error(`sunrise-sunset.org API returned status: ${json.status}`);
-  }
-  return { sunrise: json.results.sunrise, sunset: json.results.sunset };
-}
-
 export async function fetchSunTimes(
   latitude: number,
   longitude: number,
   date: Date,
-  provider: SunTimesProvider = defaultSunTimesProvider,
+  provider: SunTimesProvider,
 ): Promise<SunTimes> {
   // キャッシュ用Mapを静的に保持
   const globalAny = globalThis as any;
@@ -55,7 +38,7 @@ export async function fetchSunTimes(
   ].join("-");
 
   // providerの区別も含めてキャッシュキーを生成
-  const providerId = provider === defaultSunTimesProvider ? "default" : provider.toString();
+  const providerId = provider.toString();
   // 座標を丸めてキャッシュキーにする (連続的なスライダー変更によるDoSを防ぐため)
   const roundedLat = Math.round(latitude);
   const roundedLng = Math.round(longitude);

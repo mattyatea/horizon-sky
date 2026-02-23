@@ -4,7 +4,6 @@ export type { ComputeSkyOptions, SkyResult, SunTimesOption } from "./compute.js"
 export { realtimeSky } from "./realtime.js";
 export type { RealtimeSkyOptions } from "./realtime.js";
 
-export { defaultSunTimesProvider } from "./sunTimes.js";
 export type {
   SunTimes,
   SunTimesRequest,
