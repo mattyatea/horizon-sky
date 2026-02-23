@@ -68,6 +68,10 @@
       word-break: break-all;
     }
     
+    .info a {
+      color: #0066cc;
+    }
+    
     .preset-btns {
       display: flex;
       gap: 0.5rem;
@@ -141,6 +145,23 @@
   <script type="module">
     import { computeSky } from "./dist/index.js";
 
+    // Custom sunrise-sunset provider using sunrise-sunset.org API
+    const sunriseSunsetProvider = async ({ latitude, longitude, date }) => {
+      const url = `https://api.sunrise-sunset.org/json?lat=${latitude}&lng=${longitude}&date=${date}&formatted=0`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`sunrise-sunset.org API error: ${res.status}`);
+      }
+      const json = await res.json();
+      if (json.status !== "OK") {
+        throw new Error(`sunrise-sunset.org API returned status: ${json.status}`);
+      }
+      return {
+        sunrise: json.results.sunrise,
+        sunset: json.results.sunset,
+      };
+    };
+
     const elTime = document.getElementById("time");
     const elLat = document.getElementById("lat");
     const elLng = document.getElementById("lng");
@@ -171,14 +192,19 @@
           date,
           latitude: lat,
           longitude: lng,
+          sunTimes: { provider: sunriseSunsetProvider },
         });
 
         document.body.style.background = sky.gradient;
 
         elDebug.innerHTML = `
           <strong>Raw Altitude:</strong> ${(sky.altitude * 180 / Math.PI).toFixed(2)}°<br>
+          <strong>Corrected Altitude:</strong> ${((sky.correctedAltitude ?? sky.altitude) * 180 / Math.PI).toFixed(2)}°<br>
           <strong>Top Color:</strong> ${sky.topColor}<br>
-          <strong>Bottom Color:</strong> ${sky.bottomColor}
+          <strong>Bottom Color:</strong> ${sky.bottomColor}<br>
+          <strong>Sunrise:</strong> ${sky.sunrise?.toLocaleTimeString() ?? 'N/A'}<br>
+          <strong>Sunset:</strong> ${sky.sunset?.toLocaleTimeString() ?? 'N/A'}<br>
+          <small>Powered by <a href="https://sunrise-sunset.org/api" target="_blank" rel="noopener">sunrise-sunset.org</a></small>
         `;
       } catch (err) {
         console.error(err);
