@@ -122,22 +122,31 @@ export function renderGradient(altitude: number): GradientResult {
   const sunDirection: Vec3 = norm([Math.cos(altitude), Math.sin(altitude), 0]);
 
   const sunHeight = Math.sin(altitude);
+  
+  // Ultra gradual sunrise/sunset - extremely slow brightening/darkening
+  const NIGHT_END = -0.40;     // Full night - starts very early (-23°)
+  const SUNSET_PEAK = 0.0;      // Peak sunset exposure
+  const DAY_START = 0.995;     // Full day - extremely extended golden hour (up to 85°)
+  
   let exposure: number;
-  if (sunHeight <= -0.15) {
+  if (sunHeight <= NIGHT_END) {
     exposure = EXPOSURE_NIGHT;
-  } else if (sunHeight <= 0.0) {
-    const x = (sunHeight - -0.15) / 0.15;
-    const s = x * x * (3 - 2 * x);
+  } else if (sunHeight <= SUNSET_PEAK) {
+    const range = SUNSET_PEAK - NIGHT_END;
+    const x = (sunHeight - NIGHT_END) / range;
+    const s = x * x * (3 - 2 * x); // smoothstep
     exposure = EXPOSURE_NIGHT + s * (EXPOSURE_SUNSET - EXPOSURE_NIGHT);
-  } else if (sunHeight <= 0.4) {
-    const x = sunHeight / 0.4;
-    const s = x * x * (3 - 2 * x);
+  } else if (sunHeight <= DAY_START) {
+    const range = DAY_START - SUNSET_PEAK;
+    const x = (sunHeight - SUNSET_PEAK) / range;
+    const s = x * x * (3 - 2 * x); // smoothstep
     exposure = EXPOSURE_SUNSET + s * (EXPOSURE_DAY - EXPOSURE_SUNSET);
   } else {
     exposure = EXPOSURE_DAY;
   }
 
-  const horizonGlow = Math.max(0, 1 - Math.abs(sunHeight) * 3);
+  // Horizon glow - very extended for ultra gradual sunset
+  const horizonGlow = Math.max(0, 1 - Math.abs(sunHeight) * 0.9);
   const focalZ = 1.0 / Math.tan((FOV_DEG * 0.5 * PI) / 180.0);
 
   const stops: Array<{ percent: number; rgb: Vec3 }> = [];

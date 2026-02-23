@@ -18,4 +18,6 @@ export type { GradientResult } from "./gradient.js";
 export { getSunPosition } from "./suncalc.js";
 export type { SunPosition } from "./suncalc.js";
 
+export { getMultipleScatteringOffset, getLightPollutionAltitude } from "./correction.js";
+
 export type { Vec3 } from "./utils.js";

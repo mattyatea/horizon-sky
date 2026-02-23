@@ -1,6 +1,7 @@
 import { getSunPosition } from "./suncalc.js";
 import { renderGradient } from "./gradient.js";
 import { fetchSunTimes, correctAltitude } from "./sunTimes.js";
+import { getMultipleScatteringOffset, getLightPollutionAltitude } from "./correction.js";
 import type { SunTimesProvider, SunTimes } from "./sunTimes.js";
 import type { Vec3 } from "./utils.js";
 
@@ -25,6 +26,7 @@ export interface ComputeSkyOptions {
   latitude: number;
   longitude: number;
   sunTimes?: SunTimesOption;
+  bortle?: number;
 }
 
 function vecToRgb(v: Vec3): string {
@@ -32,38 +34,52 @@ function vecToRgb(v: Vec3): string {
 }
 
 export async function computeSky(options: ComputeSkyOptions): Promise<SkyResult> {
-  const { date, latitude, longitude, sunTimes: sunTimesOption = false } = options;
+  const {
+    date,
+    latitude,
+    longitude,
+    sunTimes: sunTimesOption = false,
+    bortle,
+  } = options;
 
-  const { altitude, azimuth } = getSunPosition(date, latitude, longitude);
+  const { altitude: rawAltitude, azimuth } = getSunPosition(date, latitude, longitude);
 
-  if (!sunTimesOption) {
-    const { gradient, topColor, bottomColor } = renderGradient(altitude);
-    return {
-      gradient,
-      topColor: vecToRgb(topColor),
-      bottomColor: vecToRgb(bottomColor),
-      altitude,
-      azimuth,
-    };
+  let altitude = rawAltitude;
+  let correctedAltitude: number | undefined;
+  let sunrise: Date | undefined;
+  let sunset: Date | undefined;
+
+  if (sunTimesOption) {
+    const provider =
+      sunTimesOption === true || sunTimesOption.provider === undefined
+        ? undefined
+        : sunTimesOption.provider;
+
+    const sunTimes: SunTimes = await fetchSunTimes(latitude, longitude, date, provider);
+    correctedAltitude = correctAltitude(date, rawAltitude, sunTimes, latitude, longitude);
+    altitude = correctedAltitude;
+    sunrise = sunTimes.sunrise;
+    sunset = sunTimes.sunset;
   }
 
-  const provider =
-    sunTimesOption === true || sunTimesOption.provider === undefined
-      ? undefined
-      : sunTimesOption.provider;
+  // Apply Multiple Scattering correction
+  altitude += getMultipleScatteringOffset(altitude);
 
-  const sunTimes: SunTimes = await fetchSunTimes(latitude, longitude, date, provider);
-  const correctedAltitude = correctAltitude(date, altitude, sunTimes, latitude, longitude);
+  // Apply Light Pollution correction
+  if (bortle !== undefined) {
+    altitude = Math.max(altitude, getLightPollutionAltitude(bortle));
+  }
 
-  const { gradient, topColor, bottomColor } = renderGradient(correctedAltitude);
+  const { gradient, topColor, bottomColor } = renderGradient(altitude);
+
   return {
     gradient,
     topColor: vecToRgb(topColor),
     bottomColor: vecToRgb(bottomColor),
-    altitude,
+    altitude: rawAltitude,
     azimuth,
     correctedAltitude,
-    sunrise: sunTimes.sunrise,
-    sunset: sunTimes.sunset,
+    sunrise,
+    sunset,
   };
 }
