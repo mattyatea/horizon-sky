@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Horizon Sky Demo</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      transition: background 0.1s ease-out;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+      max-width: 400px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      color: #333;
+    }
+
+    .control-group {
+      margin-bottom: 1rem;
+    }
+
+    .control-group label {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: #444;
+      margin-bottom: 0.5rem;
+    }
+
+    .control-group input[type="range"] {
+      width: 100%;
+      margin: 0;
+    }
+
+    .control-group .value {
+      font-family: monospace;
+      color: #666;
+    }
+
+    .info {
+      font-family: monospace;
+      font-size: 0.8rem;
+      background: rgba(0, 0, 0, 0.05);
+      padding: 0.75rem;
+      border-radius: 6px;
+      margin-top: 1rem;
+      color: #333;
+      word-break: break-all;
+    }
+    
+    .preset-btns {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    button {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    
+    button:hover {
+      background: #eee;
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "suncalc": "https://esm.sh/suncalc@1.9.0"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <div class="panel">
+    <h1>horizon-sky Demo</h1>
+    
+    <div class="preset-btns">
+      <button id="btn-sunrise">Sunrise</button>
+      <button id="btn-noon">Noon</button>
+      <button id="btn-sunset">Sunset</button>
+      <button id="btn-night">Midnight</button>
+    </div>
+
+    <div class="control-group">
+      <label>
+        <span>Time (Hour of Day)</span>
+        <span class="value" id="time-val">12.00</span>
+      </label>
+      <input type="range" id="time" min="0" max="24" step="0.1" value="12" />
+    </div>
+
+    <div class="control-group">
+      <label>
+        <span>Latitude</span>
+        <span class="value" id="lat-val">35.6895</span>
+      </label>
+      <input type="range" id="lat" min="-90" max="90" step="0.0001" value="35.6895" />
+    </div>
+
+    <div class="control-group">
+      <label>
+        <span>Longitude</span>
+        <span class="value" id="lng-val">139.6917</span>
+      </label>
+      <input type="range" id="lng" min="-180" max="180" step="0.0001" value="139.6917" />
+    </div>
+
+    <div class="info" id="debug-info">
+      Loading...
+    </div>
+  </div>
+
+  <script type="module">
+    import { computeSky } from "./dist/index.js";
+
+    const elTime = document.getElementById("time");
+    const elLat = document.getElementById("lat");
+    const elLng = document.getElementById("lng");
+    
+    const valTime = document.getElementById("time-val");
+    const valLat = document.getElementById("lat-val");
+    const valLng = document.getElementById("lng-val");
+    const elDebug = document.getElementById("debug-info");
+
+    const baseDate = new Date();
+
+    async function updateSky() {
+      const hours = parseFloat(elTime.value);
+      const lat = parseFloat(elLat.value);
+      const lng = parseFloat(elLng.value);
+
+      const h = Math.floor(hours);
+      const m = Math.floor((hours - h) * 60);
+      valTime.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+      valLat.textContent = lat.toFixed(4);
+      valLng.textContent = lng.toFixed(4);
+
+      const date = new Date(baseDate);
+      date.setHours(h, m, 0, 0);
+
+      try {
+        const sky = await computeSky({
+          date,
+          latitude: lat,
+          longitude: lng,
+        });
+
+        document.body.style.background = sky.gradient;
+
+        elDebug.innerHTML = `
+          <strong>Raw Altitude:</strong> ${(sky.altitude * 180 / Math.PI).toFixed(2)}°<br>
+          <strong>Top Color:</strong> ${sky.topColor}<br>
+          <strong>Bottom Color:</strong> ${sky.bottomColor}
+        `;
+      } catch (err) {
+        console.error(err);
+        elDebug.textContent = `Error: ${err.message}`;
+      }
+    }
+
+    elTime.addEventListener("input", updateSky);
+    elLat.addEventListener("input", updateSky);
+    elLng.addEventListener("input", updateSky);
+    
+    document.getElementById("btn-sunrise").addEventListener("click", () => { elTime.value = 5.5; updateSky(); });
+    document.getElementById("btn-noon").addEventListener("click", () => { elTime.value = 12; updateSky(); });
+    document.getElementById("btn-sunset").addEventListener("click", () => { elTime.value = 18.5; updateSky(); });
+    document.getElementById("btn-night").addEventListener("click", () => { elTime.value = 0; updateSky(); });
+
+    updateSky();
+  </script>
+</body>
+</html>
