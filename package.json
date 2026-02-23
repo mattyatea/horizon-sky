@@ -1,6 +1,6 @@
 {
   "name": "horizon-sky",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Physics-based sky gradient renderer. Given a date/time and coordinates, returns a CSS gradient representing the current sky.",
   "exports": {
